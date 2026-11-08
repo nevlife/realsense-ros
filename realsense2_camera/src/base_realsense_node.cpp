@@ -1348,27 +1348,35 @@ void BaseRealSenseNode::publishFrame(
                 image_cv_matrix = images[stream];
             }
 
-            // Prepare image topic to be published
-            // We use UniquePtr for allow intra-process publish when subscribers of that type are available
-            sensor_msgs::msg::Image::UniquePtr img_msg_ptr(new sensor_msgs::msg::Image());
-            if (!img_msg_ptr)
+            std_msgs::msg::Header header;
+            header.frame_id = OPTICAL_FRAME_ID(stream);
+            header.stamp = t;
+            const auto encoding = _rs_format_to_ros_format.find(stream_format);
+            if (image_cv_matrix.empty() || encoding == _rs_format_to_ros_format.end() ||
+                !image_publisher->publish_in_place(image_cv_matrix, encoding->second, header))
             {
-                ROS_ERROR("Sensor image message allocation failed. Frame was dropped.");
-                return;
-            }
+                // Prepare image topic to be published
+                // We use UniquePtr for allow intra-process publish when subscribers of that type are available
+                sensor_msgs::msg::Image::UniquePtr img_msg_ptr(new sensor_msgs::msg::Image());
+                if (!img_msg_ptr)
+                {
+                    ROS_ERROR("Sensor image message allocation failed. Frame was dropped.");
+                    return;
+                }
 
-            if (fillROSImageMsgAndReturnStatus(image_cv_matrix, stream, width, height, stream_format, t, img_msg_ptr.get()))
-            {
+                if (fillROSImageMsgAndReturnStatus(image_cv_matrix, stream, width, height, stream_format, t, img_msg_ptr.get()))
+                {
 
-                // Transfer the unique pointer ownership to the RMW
-                sensor_msgs::msg::Image *msg_address = img_msg_ptr.get();
-                image_publisher->publish(std::move(img_msg_ptr));
+                    // Transfer the unique pointer ownership to the RMW
+                    sensor_msgs::msg::Image *msg_address = img_msg_ptr.get();
+                    image_publisher->publish(std::move(img_msg_ptr));
 
-                ROS_DEBUG_STREAM(rs2_stream_to_string(f.get_profile().stream_type()) << " stream published, message address: " << std::hex << msg_address);
-            }
-            else
-            {
-                ROS_ERROR("Could not fill ROS message. Frame was dropped.");
+                    ROS_DEBUG_STREAM(rs2_stream_to_string(f.get_profile().stream_type()) << " stream published, message address: " << std::hex << msg_address);
+                }
+                else
+                {
+                    ROS_ERROR("Could not fill ROS message. Frame was dropped.");
+                }
             }
         }
     }

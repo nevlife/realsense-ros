@@ -145,6 +145,7 @@ endif()
 
 
 find_package(sensor_msgs REQUIRED)
+find_package(flux_wrapper REQUIRED)
 if(TARGET sensor_msgs::sensor_msgs_library)
   set(SENSOR_MSGS_TARGET sensor_msgs::sensor_msgs_library)
 else()
@@ -294,6 +295,7 @@ set(dependencies
   tf2
   tf2_ros
   diagnostic_updater
+  flux_wrapper
 )
 
 set (targets
@@ -309,6 +311,7 @@ set (targets
   tf2::tf2
   tf2_ros::tf2_ros
   diagnostic_updater::diagnostic_updater
+  flux_wrapper::flux_wrapper
 )
 
 if (BUILD_ACCELERATE_GPU_WITH_GLSL)

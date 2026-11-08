@@ -19,6 +19,7 @@
 #include <librealsense2/rs.hpp>
 #include <sensor_params.h>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <flux_wrapper/publisher.hpp>
 #include <ros_sensor.h>
 #include "named_filter.h"
 
@@ -41,7 +42,7 @@ namespace realsense2_camera
             bool _allow_no_texture_points;
             bool _ordered_pc;
             std::mutex _mutex_publisher;
-            rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr _pointcloud_publisher;
+            std::unique_ptr<flux_wrapper::Publisher<sensor_msgs::msg::PointCloud2>> _pointcloud_publisher;
             std::string _pointcloud_qos;
     };
 }
