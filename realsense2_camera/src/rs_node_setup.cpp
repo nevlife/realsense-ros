@@ -124,9 +124,9 @@ void BaseRealSenseNode::setAvailableSensors()
     auto serial_no = _dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER);
     ROS_INFO_STREAM("Device Serial No: " << serial_no);
 
-    auto device_port_id = _dev.get_info(RS2_CAMERA_INFO_PHYSICAL_PORT);
-
-    ROS_INFO_STREAM("Device physical port: " << device_port_id);
+    // A device played back from a rosbag file has no physical port.
+    if (_dev.supports(RS2_CAMERA_INFO_PHYSICAL_PORT))
+        ROS_INFO_STREAM("Device physical port: " << _dev.get_info(RS2_CAMERA_INFO_PHYSICAL_PORT));
 
     auto fw_ver = _dev.get_info(RS2_CAMERA_INFO_FIRMWARE_VERSION);
     ROS_INFO_STREAM("Device FW version: " << fw_ver);
