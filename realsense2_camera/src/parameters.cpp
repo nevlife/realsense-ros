@@ -58,6 +58,11 @@ void BaseRealSenseNode::getParameters()
     });
     _parameters_names.push_back(param_name);
 
+    // flux only: images in GPU memory, uploaded once here instead of by every GPU subscriber.
+    param_name = std::string("flux_gpu_images");
+    _flux_gpu_images = _parameters->setParam<bool>(param_name, false);
+    _parameters_names.push_back(param_name);
+
     param_name = std::string("json_file_path");
     _json_file_path = _parameters->setParam<std::string>(param_name, "");
     _parameters_names.push_back(param_name);

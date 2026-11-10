@@ -14,15 +14,25 @@
 
 #include <image_publisher.h>
 
-#include <cstring>
-
 using namespace realsense2_camera;
 
 // --- image_rcl_publisher implementation ---
+namespace
+{
+flux_wrapper::PublisherOptions flux_options( flux_wrapper::Device device )
+{
+    flux_wrapper::PublisherOptions options;
+    options.device = device;
+    return options;
+}
+}  // namespace
+
 image_rcl_publisher::image_rcl_publisher( RosNodeBase & node,
                                           const std::string & topic_name,
-                                          const rmw_qos_profile_t & qos )
-    : image_publisher_impl( node, topic_name, rclcpp::QoS( rclcpp::QoSInitialization::from_rmw( qos ), qos ) )
+                                          const rmw_qos_profile_t & qos,
+                                          flux_wrapper::Device device )
+    : image_publisher_impl( node, topic_name, rclcpp::QoS( rclcpp::QoSInitialization::from_rmw( qos ), qos ),
+                            flux_options( device ) )
 {
 }
 
@@ -40,8 +50,10 @@ bool image_rcl_publisher::publish_in_place( const cv::Mat & image,
         return false;
     auto loan = image_publisher_impl.loan();
     const size_t row_bytes = image.cols * image.elemSize();
-    auto data = loan.alloc_data( row_bytes * image.rows );
-    if( ! loan || data.empty() )
+    // Host memory, or device memory with flux_gpu_images; copy_from takes one contiguous run.
+    const cv::Mat packed = image.isContinuous() ? image : image.clone();
+    auto data = loan.alloc_buffer( row_bytes * image.rows );
+    if( ! loan || ! data || ! data.copy_from( packed.data, row_bytes * image.rows ) )
         return true;  // no free slot, or the image is over the slot size: the frame is dropped
     loan.set_header( header );
     loan.set_height( image.rows );
@@ -49,8 +61,6 @@ bool image_rcl_publisher::publish_in_place( const cv::Mat & image,
     loan.set_encoding( encoding );
     loan.set_is_bigendian( false );
     loan.set_step( row_bytes );
-    for( int row = 0; row < image.rows; ++row )
-        std::memcpy( data.data() + row * row_bytes, image.ptr( row ), row_bytes );
     image_publisher_impl.publish( std::move( loan ) );
     return true;
 }

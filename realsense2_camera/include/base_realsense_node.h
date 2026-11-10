@@ -360,6 +360,7 @@ namespace realsense2_camera
 
         std::map<stream_index_pair, bool> _enable;
         bool _publish_tf;
+        bool _flux_gpu_images;
         double _tf_publish_rate, _diagnostics_period;
         std::mutex _publish_tf_mutex;
         std::mutex _update_sensor_mutex;

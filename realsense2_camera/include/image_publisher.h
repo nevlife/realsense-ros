@@ -45,7 +45,8 @@ class image_rcl_publisher : public image_publisher
 public:
     image_rcl_publisher( RosNodeBase & node,
                          const std::string & topic_name,
-                         const rmw_qos_profile_t & qos );
+                         const rmw_qos_profile_t & qos,
+                         flux_wrapper::Device device = flux_wrapper::Device::Host );
     void publish( sensor_msgs::msg::Image::UniquePtr image_ptr ) override;
     bool publish_in_place( const cv::Mat & image,
                            const std::string & encoding,
