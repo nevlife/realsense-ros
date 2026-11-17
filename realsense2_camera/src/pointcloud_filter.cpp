@@ -69,15 +69,10 @@ void PointcloudFilter::setPublisher()
     std::lock_guard<std::mutex> lock_guard(_mutex_publisher);
     if ((_is_enabled) && (!_pointcloud_publisher))
     {
-        // flux only: a 1280x720 cloud with color is about 15 MiB, over the default slot.
-        flux_wrapper::PublisherOptions flux_options;
-        flux_options.max_message_size = 32u << 20;
-        flux_options.slot_count = 4;
         _pointcloud_publisher = std::make_unique<flux_wrapper::Publisher<sensor_msgs::msg::PointCloud2>>(
                                 _node, "~/depth/color/points",
                                 rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(qos_string_to_qos(_pointcloud_qos)),
-                                            qos_string_to_qos(_pointcloud_qos)),
-                                flux_options);
+                                            qos_string_to_qos(_pointcloud_qos)));
     }
     else if ((!_is_enabled) && (_pointcloud_publisher))
     {
