@@ -71,4 +71,26 @@ private:
     std::shared_ptr< image_transport::Publisher > image_publisher_impl;
 };
 
+#ifndef USE_LIFECYCLE_NODE
+// With flux: flux subscribers take the image from flux, and image_transport (raw over DDS,
+// compressed, ...) serves the ROS subscribers beside them.
+class image_flux_transport_publisher : public image_publisher
+{
+public:
+    image_flux_transport_publisher( rclcpp::Node & node,
+                                    const std::string & topic_name,
+                                    const rmw_qos_profile_t & qos,
+                                    flux_wrapper::Device device );
+    void publish( sensor_msgs::msg::Image::UniquePtr image_ptr ) override;
+    bool publish_in_place( const cv::Mat & image,
+                           const std::string & encoding,
+                           const std_msgs::msg::Header & header ) override;
+    size_t get_subscription_count() const override;
+
+private:
+    image_rcl_publisher flux_publisher;
+    image_transport_publisher ros_publisher;
+};
+#endif
+
 }  // namespace realsense2_camera

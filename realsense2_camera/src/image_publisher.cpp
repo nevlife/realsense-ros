@@ -14,6 +14,8 @@
 
 #include <image_publisher.h>
 
+#include <cstring>
+
 using namespace realsense2_camera;
 
 // --- image_rcl_publisher implementation ---
@@ -96,3 +98,51 @@ size_t image_transport_publisher::get_subscription_count() const
 {
     return image_publisher_impl->getNumSubscribers();
 }
+
+#ifndef USE_LIFECYCLE_NODE
+// --- image_flux_transport_publisher implementation ---
+image_flux_transport_publisher::image_flux_transport_publisher( rclcpp::Node & node,
+                                                                const std::string & topic_name,
+                                                                const rmw_qos_profile_t & qos,
+                                                                flux_wrapper::Device device )
+    : flux_publisher( node, topic_name, qos, device )
+    , ros_publisher( node, topic_name, qos )
+{
+}
+
+void image_flux_transport_publisher::publish( sensor_msgs::msg::Image::UniquePtr image_ptr )
+{
+    if( ros_publisher.get_subscription_count() != 0 )
+        ros_publisher.publish( std::make_unique< sensor_msgs::msg::Image >( *image_ptr ) );
+    if( flux_publisher.get_subscription_count() != 0 )
+        flux_publisher.publish( std::move( image_ptr ) );
+}
+
+bool image_flux_transport_publisher::publish_in_place( const cv::Mat & image,
+                                                       const std::string & encoding,
+                                                       const std_msgs::msg::Header & header )
+{
+    if( flux_publisher.get_subscription_count() != 0
+        && ! flux_publisher.publish_in_place( image, encoding, header ) )
+        return false;
+    if( ros_publisher.get_subscription_count() == 0 )
+        return true;
+    auto msg = std::make_unique< sensor_msgs::msg::Image >();
+    msg->header = header;
+    msg->height = image.rows;
+    msg->width = image.cols;
+    msg->encoding = encoding;
+    msg->is_bigendian = false;
+    msg->step = image.cols * image.elemSize();
+    msg->data.resize( msg->step * image.rows );
+    for( int r = 0; r < image.rows; ++r )
+        std::memcpy( msg->data.data() + r * msg->step, image.ptr( r ), msg->step );
+    ros_publisher.publish( std::move( msg ) );
+    return true;
+}
+
+size_t image_flux_transport_publisher::get_subscription_count() const
+{
+    return flux_publisher.get_subscription_count() + ros_publisher.get_subscription_count();
+}
+#endif

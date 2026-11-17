@@ -292,7 +292,11 @@ void BaseRealSenseNode::startPublishers(const std::vector<stream_profile>& profi
                 _image_publishers[sip] = std::make_shared<image_rcl_publisher>(_node, image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Host);
                 #else
                 // 🚀 Use intra-process if enabled, otherwise use image_transport
-                if (_use_intra_process || flux_wrapper::use_flux())
+                if (flux_wrapper::use_flux())
+                {
+                    _image_publishers[sip] = std::make_shared<image_flux_transport_publisher>(_node, image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Host);
+                }
+                else if (_use_intra_process)
                 {
                     _image_publishers[sip] = std::make_shared<image_rcl_publisher>(_node, image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Host);
                 }
@@ -326,7 +330,11 @@ void BaseRealSenseNode::startPublishers(const std::vector<stream_profile>& profi
                     _depth_aligned_image_publishers[sip] = std::make_shared<image_rcl_publisher>(_node, aligned_image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Host);
                     #else
                     // Use intra-process if enabled, otherwise use image_transport
-                    if (_use_intra_process || flux_wrapper::use_flux())
+                    if (flux_wrapper::use_flux())
+                    {
+                        _depth_aligned_image_publishers[sip] = std::make_shared<image_flux_transport_publisher>(_node, aligned_image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Host);
+                    }
+                    else if (_use_intra_process)
                     {
                         _depth_aligned_image_publishers[sip] = std::make_shared<image_rcl_publisher>(_node, aligned_image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Host);
                     }
