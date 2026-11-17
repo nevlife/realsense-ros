@@ -1,0 +1,6 @@
+# Camera list read by d435i_multi.launch.py
+
+serials: [239122071306]
+
+# Start interval in seconds between the cameras
+stagger: 2.0
