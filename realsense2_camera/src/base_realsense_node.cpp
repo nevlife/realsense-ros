@@ -597,24 +597,27 @@ void BaseRealSenseNode::frame_callback(rs2::frame frame)
             auto stream_index = f.get_profile().stream_index();
             auto stream_format = f.get_profile().format();
             stream_index_pair sip{stream_type,stream_index};
+            // Each sensor's own capture time: color and depth are exposed apart. An aligned
+            // depth and a point cloud keep the time of the depth they come from.
+            const rclcpp::Time ft(frameSystemTimeSec(f));
 
             ROS_DEBUG("Frameset contain (%s, %d, %s) frame. frame_number: %llu ; frame_TS: %f ; ros_TS(NSec): %lu", 
-                rs2_stream_to_string(stream_type), stream_index, rs2_format_to_string(stream_format), f.get_frame_number(), frame_time, t.nanoseconds());
+                rs2_stream_to_string(stream_type), stream_index, rs2_format_to_string(stream_format), f.get_frame_number(), f.get_timestamp(), ft.nanoseconds());
             if (f.is<rs2::video_frame>())
                 ROS_DEBUG_STREAM("frame: " << f.as<rs2::video_frame>().get_width() << " x " << f.as<rs2::video_frame>().get_height());
 
             if (f.is<rs2::labeled_points>())
             {
-                publishLabeledPointCloud(f.as<rs2::labeled_points>(), t);
-                publishMetadata(f, t, OPTICAL_FRAME_ID(sip));
+                publishLabeledPointCloud(f.as<rs2::labeled_points>(), ft);
+                publishMetadata(f, ft, OPTICAL_FRAME_ID(sip));
             }
             else if (f.is<rs2::points>())
             {
-                publishPointCloud(f.as<rs2::points>(), t, frameset);
+                publishPointCloud(f.as<rs2::points>(), ft, frameset);
             }
             else if(stream_type == RS2_STREAM_OCCUPANCY)
             {
-                publishOccupancyFrame(f, t);
+                publishOccupancyFrame(f, ft);
             }
             else
             {
@@ -624,26 +627,27 @@ void BaseRealSenseNode::frame_callback(rs2::frame frame)
                     sent_depth_frame = true;
                     if (original_color_frame && _align_depth_filter->is_enabled())
                     {
-                        publishFrame(f, t, COLOR, _depth_aligned_image, _depth_aligned_info_publisher, _depth_aligned_image_publishers, false);
+                        publishFrame(f, ft, COLOR, _depth_aligned_image, _depth_aligned_info_publisher, _depth_aligned_image_publishers, false);
                         continue;
                     }
                     if (original_infra2_frame && _align_depth_filter->is_enabled())
                     {
-                        publishFrame(f, t, INFRA2, _depth_aligned_image, _depth_aligned_info_publisher, _depth_aligned_image_publishers, false);
+                        publishFrame(f, ft, INFRA2, _depth_aligned_image, _depth_aligned_info_publisher, _depth_aligned_image_publishers, false);
                         continue;
                     }
                 }
-                publishFrame(f, t, sip, _images, _info_publishers, _image_publishers);
+                publishFrame(f, ft, sip, _images, _info_publishers, _image_publishers);
             }
         }
         if (original_depth_frame && _align_depth_filter->is_enabled())
         {
+            const rclcpp::Time depth_t(frameSystemTimeSec(original_depth_frame));
             rs2::frame frame_to_send;
             if (_colorizer_filter->is_enabled())
                 frame_to_send = _colorizer_filter->Process(original_depth_frame);
             else
                 frame_to_send = original_depth_frame;
-            publishFrame(frame_to_send, t, DEPTH, _images, _info_publishers, _image_publishers);
+            publishFrame(frame_to_send, depth_t, DEPTH, _images, _info_publishers, _image_publishers);
 
             // Publish RGBD only if rgbd enabled and both depth and color frames exist.
             // On this line we already know original_depth_frame is valid.
@@ -651,7 +655,8 @@ void BaseRealSenseNode::frame_callback(rs2::frame frame)
             {
                 auto color_format = original_color_frame.get_profile().format();
                 auto depth_format = original_depth_frame.get_profile().format();
-                publishRGBD(_images[COLOR], color_format, _depth_aligned_image[COLOR], depth_format, t);
+                publishRGBD(_images[COLOR], color_format, _depth_aligned_image[COLOR], depth_format,
+                            frameSystemTimeSec(original_color_frame), depth_t);
             }  
         }
     }
@@ -1432,7 +1437,8 @@ void BaseRealSenseNode::publishRGBD(
     const rs2_format& color_format,
     const cv::Mat& depth_cv_matrix,
     const rs2_format& depth_format,
-    const rclcpp::Time& t)
+    const rclcpp::Time& rgb_t,
+    const rclcpp::Time& depth_t)
 {
     if (_rgbd_publisher && 0 != _rgbd_publisher->get_subscription_count())
     {
@@ -1454,14 +1460,14 @@ void BaseRealSenseNode::publishRGBD(
             msg->depth_camera_info = _camera_info.at(COLOR);
         }
 
-        bool rgb_message_filled = fillROSImageMsgAndReturnStatus(rgb_cv_matrix, COLOR, rgb_width, rgb_height, color_format, t, &msg->rgb);
+        bool rgb_message_filled = fillROSImageMsgAndReturnStatus(rgb_cv_matrix, COLOR, rgb_width, rgb_height, color_format, rgb_t, &msg->rgb);
         if(!rgb_message_filled)
         {
             ROS_ERROR_STREAM("Failed to fill rgb message inside RGBD message");
             return;
         }
         
-        bool depth_messages_filled = fillROSImageMsgAndReturnStatus(depth_cv_matrix, depth_stream_index_pair, depth_width, depth_height, depth_format, t, &msg->depth);
+        bool depth_messages_filled = fillROSImageMsgAndReturnStatus(depth_cv_matrix, depth_stream_index_pair, depth_width, depth_height, depth_format, depth_t, &msg->depth);
         if(!depth_messages_filled)
         {
             ROS_ERROR_STREAM("Failed to fill depth message inside RGBD message");
@@ -1469,7 +1475,7 @@ void BaseRealSenseNode::publishRGBD(
         }
 
         msg->header.frame_id = "camera_rgbd_optical_frame";
-        msg->header.stamp = t;
+        msg->header.stamp = rgb_t;
 
 
         realsense2_camera_msgs::msg::RGBD *msg_address = msg.get();

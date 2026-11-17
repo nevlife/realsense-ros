@@ -311,7 +311,8 @@ namespace realsense2_camera
             const rs2_format& color_format,
             const cv::Mat& depth_cv_matrix,
             const rs2_format& depth_format,
-            const rclcpp::Time& t);
+            const rclcpp::Time& rgb_t,
+            const rclcpp::Time& depth_t);
 
         void publishMetadata(rs2::frame f, const rclcpp::Time& header_time, const std::string& frame_id);
 
