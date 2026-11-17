@@ -112,6 +112,12 @@ def yaml_to_dict(path_to_yaml):
     with open(path_to_yaml, "r") as f:
         return yaml.load(f, Loader=yaml.SafeLoader)
 
+# The image topics of the node; image_transport may compress each one to JPEG.
+JPEG_TOPICS = ['color/image_raw', 'depth/image_rect_raw', 'infra1/image_rect_raw',
+               'infra2/image_rect_raw', 'aligned_depth_to_color/image_raw',
+               'aligned_depth_to_infra1/image_raw']
+JPEG_QUALITY = 95
+
 def launch_setup(context, params, param_name_suffix=''):
     _config_file = LaunchConfiguration('config_file' + param_name_suffix).perform(context)
     params_from_file = {} if _config_file == "''" else yaml_to_dict(_config_file)
@@ -139,6 +145,10 @@ def launch_setup(context, params, param_name_suffix=''):
     use_lifecycle_node = lifecycle_params.get("use_lifecycle_node", False)
 
     _output = LaunchConfiguration('output' + param_name_suffix)
+    # image_transport names the JPEG quality of a topic after the node and the topic.
+    camera_name = LaunchConfiguration('camera_name' + param_name_suffix).perform(context)
+    jpeg_params = {'.' + camera_name + '.' + topic.replace('/', '.') + '.compressed.jpeg_quality':
+                   JPEG_QUALITY for topic in JPEG_TOPICS}
     
     # Dynamically choose Node or LifecycleNode
     node_action = launch_ros.actions.LifecycleNode if use_lifecycle_node else launch_ros.actions.Node
@@ -157,7 +167,7 @@ def launch_setup(context, params, param_name_suffix=''):
             namespace=LaunchConfiguration('camera_namespace' + param_name_suffix),
             name=LaunchConfiguration('camera_name' + param_name_suffix),
             executable='realsense2_camera_node',
-            parameters=[params, params_from_file],
+            parameters=[jpeg_params, params, params_from_file],
             output=_output,
             arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level' + param_name_suffix)],
             emulate_tty=True,
