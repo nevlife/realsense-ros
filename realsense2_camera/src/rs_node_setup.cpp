@@ -289,16 +289,16 @@ void BaseRealSenseNode::startPublishers(const std::vector<stream_profile>& profi
 
                 #ifdef USE_LIFECYCLE_NODE
                 // Always use `image_rcl_publisher` when lifecycle nodes are enabled
-                _image_publishers[sip] = std::make_shared<image_rcl_publisher>(_node, image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Host);
+                _image_publishers[sip] = std::make_shared<image_rcl_publisher>(_node, image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Cpu);
                 #else
                 // 🚀 Use intra-process if enabled, otherwise use image_transport
                 if (flux_wrapper::use_flux())
                 {
-                    _image_publishers[sip] = std::make_shared<image_flux_transport_publisher>(_node, image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Host);
+                    _image_publishers[sip] = std::make_shared<image_flux_transport_publisher>(_node, image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Cpu);
                 }
                 else if (_use_intra_process)
                 {
-                    _image_publishers[sip] = std::make_shared<image_rcl_publisher>(_node, image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Host);
+                    _image_publishers[sip] = std::make_shared<image_rcl_publisher>(_node, image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Cpu);
                 }
                 else
                 {
@@ -327,16 +327,16 @@ void BaseRealSenseNode::startPublishers(const std::vector<stream_profile>& profi
                     // image-transport package publisher that add's a commpressed image topic if the package is installed
                     #ifdef USE_LIFECYCLE_NODE
                     // Always use `image_rcl_publisher` when lifecycle nodes are enabled
-                    _depth_aligned_image_publishers[sip] = std::make_shared<image_rcl_publisher>(_node, aligned_image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Host);
+                    _depth_aligned_image_publishers[sip] = std::make_shared<image_rcl_publisher>(_node, aligned_image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Cpu);
                     #else
                     // Use intra-process if enabled, otherwise use image_transport
                     if (flux_wrapper::use_flux())
                     {
-                        _depth_aligned_image_publishers[sip] = std::make_shared<image_flux_transport_publisher>(_node, aligned_image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Host);
+                        _depth_aligned_image_publishers[sip] = std::make_shared<image_flux_transport_publisher>(_node, aligned_image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Cpu);
                     }
                     else if (_use_intra_process)
                     {
-                        _depth_aligned_image_publishers[sip] = std::make_shared<image_rcl_publisher>(_node, aligned_image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Host);
+                        _depth_aligned_image_publishers[sip] = std::make_shared<image_rcl_publisher>(_node, aligned_image_raw.str(), qos, _flux_gpu_images ? flux_wrapper::Device::Cuda : flux_wrapper::Device::Cpu);
                     }
                     else
                     {

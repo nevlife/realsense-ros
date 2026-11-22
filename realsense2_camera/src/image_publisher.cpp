@@ -23,7 +23,9 @@ namespace
 {
 flux_wrapper::PublisherOptions flux_options( flux_wrapper::Device device )
 {
+    // Fixed slots of the flux default, 4 MiB: 1280x720 rgb8 fits, 1920x1080 rgb8 does not.
     flux_wrapper::PublisherOptions options;
+    options.alloc = flux_wrapper::Alloc::Slot;
     options.device = device;
     return options;
 }
